@@ -1,0 +1,120 @@
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "C_Cpp.default.includePath": [
+            "${workspaceFolder}/src",
+            "${workspaceFolder}/.pio/libdeps/desktop/LovyanGFX/src",
+            "${workspaceFolder}/.pio/libdeps/cyd/LovyanGFX/src",
+            "/opt/homebrew/include/SDL2",
+            "/usr/local/include/SDL2"
+        ],
+        "C_Cpp.default.defines": [
+            "LGFX_SDL",
+            "WIDTH=320",
+            "HEIGHT=240"
+        ],
+        "C_Cpp.default.cppStandard": "c++17",
+        "C_Cpp.default.compilerPath": "/usr/bin/clang++",
+        "files.associations": {
+            "*.h": "cpp",
+            "*.hpp": "cpp"
+        },
+        "editor.formatOnSave": false
+    },
+    "extensions": {
+        "recommendations": [
+            "platformio.platformio-ide",
+            "ms-vscode.cpptools"
+        ]
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "Run Desktop (SDL)",
+                "type": "cppdbg",
+                "request": "launch",
+                "program": "${workspaceFolder}/.pio/build/desktop/program",
+                "args": [],
+                "stopAtEntry": false,
+                "cwd": "${workspaceFolder}",
+                "environment": [],
+                "externalConsole": false,
+                "MIMode": "lldb",
+                "preLaunchTask": "PlatformIO: Build desktop"
+            },
+            {
+                "name": "Debug Desktop (SDL)",
+                "type": "cppdbg",
+                "request": "launch",
+                "program": "${workspaceFolder}/.pio/build/desktop/program",
+                "args": [],
+                "stopAtEntry": true,
+                "cwd": "${workspaceFolder}",
+                "environment": [],
+                "externalConsole": false,
+                "MIMode": "lldb",
+                "preLaunchTask": "PlatformIO: Build desktop"
+            }
+        ]
+    },
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "label": "PlatformIO: Build desktop",
+                "type": "shell",
+                "command": "pio run -e desktop",
+                "group": {
+                    "kind": "build",
+                    "isDefault": true
+                },
+                "presentation": {
+                    "reveal": "always",
+                    "panel": "shared",
+                    "clear": true
+                },
+                "problemMatcher": {
+                    "owner": "cpp",
+                    "fileLocation": ["relative", "${workspaceFolder}"],
+                    "pattern": {
+                        "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                        "file": 1,
+                        "line": 2,
+                        "column": 3,
+                        "severity": 4,
+                        "message": 5
+                    }
+                }
+            },
+            {
+                "label": "PlatformIO: Build CYD",
+                "type": "shell",
+                "command": "pio run -e cyd",
+                "group": "build",
+                "presentation": {
+                    "reveal": "always",
+                    "panel": "shared",
+                    "clear": true
+                },
+                "problemMatcher": []
+            },
+            {
+                "label": "PlatformIO: Upload to CYD",
+                "type": "shell",
+                "command": "pio run -e cyd -t upload",
+                "group": "none",
+                "presentation": {
+                    "reveal": "always",
+                    "panel": "shared",
+                    "clear": true
+                },
+                "problemMatcher": []
+            }
+        ]
+    }
+}
