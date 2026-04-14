@@ -2,6 +2,13 @@
 #include "network.h"
 #include <ctime>      // time_t, struct tm – available on both platforms
 
+// Material Symbols WiFi icons – 16 × 16 px RGBA PNGs embedded as byte arrays.
+// Export from fonts.google.com/icons (20 dp, weight 400, #FFFFFF), then:
+//   xxd -i icon.png > src/icon_name.h
+#include "wifi_16dp_FFFFFF_FILL0_wght400_GRAD0_opsz20.h"        // 3 bars (full)
+#include "wifi_2_bar_16dp_FFFFFF_FILL0_wght400_GRAD0_opsz20.h"  // 2 bars
+#include "wifi_1_bar_16dp_FFFFFF_FILL0_wght400_GRAD0_opsz20.h"  // 1 bar (dot)
+
 // ── Platform-specific time retrieval ────────────────────────────────────────
 #ifdef LGFX_SDL
 static bool get_local_time(struct tm* t)
@@ -32,77 +39,58 @@ static int rssi_to_bars(int rssi)
 
 // ── WiFi icon ────────────────────────────────────────────────────────────────
 //
-//  Three 1-bit bitmaps (13 × 12 px) that match the Material Symbols wifi,
-//  wifi_2_bar and wifi_1_bar icons (viewBox 0 -960 960 960), scaled down to
-//  fit the 20 px status bar.
+//  Renders one of the three Material Symbols PNG assets (16 × 16 px, RGBA)
+//  using LovyanGFX's built-in PNG decoder.  drawPng() alpha-blends each pixel
+//  over whatever is already on screen, so the transparent background in the
+//  exported icons composites cleanly over the black status bar.
 //
-//  Layout (rows within the 12 px icon, Y increases downward):
-//    rows  0-3  outer arc  – shown at bars ≥ 3
-//    rows  4-8  inner arc  – shown at bars ≥ 2
-//    rows  9-11 dot        – shown at bars ≥ 1  (dimmed at bars == 0)
-//
-//  Bitmap encoding: MSB = leftmost pixel, stride = 2 bytes/row,
-//  the rightmost 3 bits of the second byte in each row are unused padding.
+//  bars == 0: area cleared, no icon drawn (clearly disconnected)
+//  bars == 1: wifi_1_bar  (dot only)
+//  bars == 2: wifi_2_bar  (dot + inner arc)
+//  bars >= 3: wifi        (dot + both arcs)
 
 static void draw_wifi_icon(int bars)
 {
-    // Outer arc: .XXXXXXXXXXX. / XX.........XX / X...........X / (gap)
-    static const uint8_t outer_arc[] = {
-        0x7F,0xF0,   // .XXXXXXXXXXX.   cols 1-11
-        0xC0,0x18,   // XX.........XX   cols 0-1, 11-12
-        0x80,0x08,   // X...........X   cols 0, 12
-        0x00,0x00,   // (gap)
-    };
-    // Inner arc: ...XXXXXXX... / ..X.......X.. / .XX.......XX. / (gap×2)
-    static const uint8_t inner_arc[] = {
-        0x1F,0xC0,   // ...XXXXXXX...   cols 3-9
-        0x20,0x20,   // ..X.......X..   cols 2, 10
-        0x60,0x30,   // .XX.......XX.   cols 1-2, 10-11
-        0x00,0x00,   // (gap)
-        0x00,0x00,   // (gap)
-    };
-    // Dot: 3 × 3 px centred on the icon (cols 5-7)
-    static const uint8_t dot_bmp[] = {
-        0x07,0x00,   // .....XXX.....
-        0x07,0x00,   // .....XXX.....
-        0x07,0x00,   // .....XXX.....
-    };
+    constexpr int IW = 16;
+    constexpr int IH = 16;
+    const int     IX = WIDTH - IW - 2;           // 2 px right margin
+    const int     IY = (STATUS_BAR_H - IH) / 2; // vertically centred in bar
 
-    constexpr int IW = 13;                       // icon pixel width
-    constexpr int IH = 12;                       // icon pixel height (4+5+3)
-    const int     IX = (WIDTH - 13) - IW / 2;   // left edge  ≈ WIDTH - 20
-    const int     IY = (STATUS_BAR_H - IH) / 2; // top edge   = 4 px
+    // Clear icon area
+    tft.fillRect(IX - 1, 0, IW + 3, STATUS_BAR_H, 0x000000);
 
-    // Clear icon area (add 1 px margin each side)
-    tft.fillRect(IX - 1, 0, IW + 2, STATUS_BAR_H, 0x000000);
+    const uint8_t* png = nullptr;
+    uint32_t       len = 0;
 
-    const uint32_t ON  = 0xFFFFFF;   // white – active bars
-    const uint32_t OFF = 0x3A3A3A;   // dark grey – disconnected
-
-    if (bars == 0) {
-        // Full icon dimmed to signal no connection
-        tft.drawBitmap(IX, IY,     outer_arc, IW, 4, OFF);
-        tft.drawBitmap(IX, IY + 4, inner_arc, IW, 5, OFF);
-        tft.drawBitmap(IX, IY + 9, dot_bmp,   IW, 3, OFF);
-        return;
+    if (bars >= 3) {
+        png = wifi_16dp_FFFFFF_FILL0_wght400_GRAD0_opsz20_png;
+        len = wifi_16dp_FFFFFF_FILL0_wght400_GRAD0_opsz20_png_len;
+    } else if (bars == 2) {
+        png = wifi_2_bar_16dp_FFFFFF_FILL0_wght400_GRAD0_opsz20_png;
+        len = wifi_2_bar_16dp_FFFFFF_FILL0_wght400_GRAD0_opsz20_png_len;
+    } else if (bars == 1) {
+        png = wifi_1_bar_16dp_FFFFFF_FILL0_wght400_GRAD0_opsz20_png;
+        len = wifi_1_bar_16dp_FFFFFF_FILL0_wght400_GRAD0_opsz20_png_len;
+    } else {
+        return;   // bars == 0: leave area blank to indicate no connection
     }
 
-    if (bars >= 3)
-        tft.drawBitmap(IX, IY,     outer_arc, IW, 4, ON);
-    if (bars >= 2)
-        tft.drawBitmap(IX, IY + 4, inner_arc, IW, 5, ON);
-    tft.drawBitmap(IX, IY + 9, dot_bmp, IW, 3, ON);
+    tft.drawPng(png, len, IX, IY);
 }
 
 // ── Time display ─────────────────────────────────────────────────────────────
 
 static void draw_time(const struct tm& ti, bool valid)
 {
+    // FreeMono9pt7b glyphs are ~14 px tall – fits the 20 px bar with a small
+    // margin.  setFont() is reset to nullptr at the end so callers that draw
+    // text afterwards (e.g. show_status in app.cpp) keep the default font.
+    tft.setFont(&lgfx::fonts::FreeMonoBold9pt7b);
     tft.setTextDatum(lgfx::middle_left);
     tft.setTextSize(1);
 
-    // Clear time region (enough for "HH:MM" at size 1)
-    tft.fillRect(0, 0, 48, STATUS_BAR_H, 0x000000);
+    // Clear time region – FreeMono9pt7b is ~11 px/char, 5 chars + 4 px margin
+    tft.fillRect(0, 0, 72, STATUS_BAR_H, 0x000000);
 
     const int Y = STATUS_BAR_H / 2;
     int x = 4;
@@ -110,6 +98,7 @@ static void draw_time(const struct tm& ti, bool valid)
     if (!valid) {
         tft.setTextColor(0x3A3A3A);
         tft.drawString("--:--", x, Y);
+        tft.setFont(nullptr);
         return;
     }
 
@@ -131,6 +120,8 @@ static void draw_time(const struct tm& ti, bool valid)
     tft.setTextColor(0xFFFFFF);
     snprintf(buf, sizeof(buf), "%02d", ti.tm_min);
     tft.drawString(buf, x, Y);
+
+    tft.setFont(nullptr);  // restore default font for subsequent draw calls
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────

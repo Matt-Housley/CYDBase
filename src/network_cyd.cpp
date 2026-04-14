@@ -11,6 +11,13 @@ void network_init(NetworkStatusCallback on_status)
 {
     if (on_status) on_status("Connecting to WiFi...");
 
+    // Force STA mode and let the WiFi stack settle before handing off to
+    // WiFiManager.  Without this the ESP32 can be left in a mixed or
+    // AP-remnant state from the previous run, causing the saved-credential
+    // connect attempt to fail non-deterministically.
+    WiFi.mode(WIFI_STA);
+    delay(100);
+
     WiFiManager wm;
 
     // Shown on the display while the captive portal is active.
@@ -19,12 +26,29 @@ void network_init(NetworkStatusCallback on_status)
             on_status("Connect to WiFi:\n" + std::string(mgr->getConfigPortalSSID().c_str()));
     });
 
+    // Give the saved-network connection attempt a full 60 s before falling
+    // back to the portal.  WiFiManager's default is short enough that a
+    // slightly slow router response will cause it to silently open the portal
+    // instead of retrying – which looks like "didn't connect" to the user.
+    wm.setConnectTimeout(60);
+
     // Never time out the captive portal – block until the user configures WiFi.
     // A timed-out portal + ESP.restart() creates an infinite reboot loop when
     // NVS credentials are missing (e.g. after a clean flash).
     wm.setConfigPortalTimeout(0);
 
+    // After the captive portal the radio is still in WIFI_AP_STA mode with an
+    // active softAP.  Calling WiFi.begin() without first tearing that down
+    // hangs the ESP32 WiFi driver indefinitely ("Connecting to NEW AP" freeze).
+    // setCleanConnect(true) makes WiFiManager call WiFi.disconnect() and wait
+    // for the radio to fully idle before every WiFi.begin() attempt.
+    wm.setCleanConnect(true);
+
     wm.autoConnect("CYDBase-Setup");   // blocks until connected
+
+    // Re-enable auto-reconnect so a transient signal drop doesn't require a
+    // reboot to recover.
+    WiFi.setAutoReconnect(true);
 
     if (on_status) on_status("WiFi: " + network_ip());
 

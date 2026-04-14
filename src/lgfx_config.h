@@ -20,6 +20,21 @@
 
 #include <LovyanGFX.hpp>
 
+#if FALSE
+#define CYD28_TouchR_CAL_XMIN   185
+#define CYD28_TouchR_CAL_XMAX   3700
+#define CYD28_TouchR_CAL_YMIN   280
+#define CYD28_TouchR_CAL_YMAX   3850
+#else
+#define CYD28_TouchR_CAL_XMIN   300
+#define CYD28_TouchR_CAL_XMAX   3900
+#define CYD28_TouchR_CAL_YMIN   200
+#define CYD28_TouchR_CAL_YMAX   3700
+#endif
+
+
+
+
 class LGFX : public lgfx::LGFX_Device
 {
     lgfx::Panel_ILI9341  _panel_instance;
@@ -81,10 +96,10 @@ public:
 
         {   // Touch – XPT2046 (VSPI)
             auto cfg = _touch_instance.config();
-            cfg.x_min           = 300;
-            cfg.x_max           = 3900;
-            cfg.y_min           = 200;
-            cfg.y_max           = 3700;
+            cfg.x_min           = CYD28_TouchR_CAL_XMIN;
+            cfg.x_max           = CYD28_TouchR_CAL_XMAX;
+            cfg.y_min           = CYD28_TouchR_CAL_YMIN;
+            cfg.y_max           = CYD28_TouchR_CAL_XMAX;
             cfg.pin_int         = 36;
             cfg.bus_shared      = true;
             cfg.offset_rotation = 4;
